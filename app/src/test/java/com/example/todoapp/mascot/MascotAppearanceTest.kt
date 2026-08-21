@@ -14,6 +14,10 @@ class MascotAppearanceTest {
             MascotAppearance.MAX_OPACITY_PERCENT,
             MascotAppearance.normalized(999, 999).opacityPercent,
         )
+        assertEquals(
+            false,
+            MascotAppearance.normalized(100, 100, movementEnabled = false).movementEnabled,
+        )
     }
 
     @Test
@@ -25,5 +29,6 @@ class MascotAppearanceTest {
 
         assertEquals(230, appearance.scaledDimension(184))
         assertEquals(0.65f, appearance.alpha, 0.0001f)
+        assertEquals(true, appearance.movementEnabled)
     }
 }

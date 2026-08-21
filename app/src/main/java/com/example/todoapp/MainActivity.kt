@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private var mascotOverlayAllowed by mutableStateOf(false)
     private var mascotSizePercent by mutableStateOf(MascotAppearance.DEFAULT_SIZE_PERCENT)
     private var mascotOpacityPercent by mutableStateOf(MascotAppearance.DEFAULT_OPACITY_PERCENT)
+    private var mascotMovementEnabled by mutableStateOf(MascotAppearance.DEFAULT_MOVEMENT_ENABLED)
     private var startMascotAfterPermissionRequest = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
                     mascotVisible = mascotVisible,
                     mascotSizePercent = mascotSizePercent,
                     mascotOpacityPercent = mascotOpacityPercent,
+                    mascotMovementEnabled = mascotMovementEnabled,
                     onRequestExactAlarmAccess = ::requestExactAlarmAccess,
                     onRequestFullScreenAlertAccess = ::requestFullScreenAlertAccess,
                     onOpenNotificationSettings = ::openNotificationSettings,
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
                     onHideMascot = ::hideMascot,
                     onMascotSizeChange = ::updateMascotSizePercent,
                     onMascotOpacityChange = ::updateMascotOpacityPercent,
+                    onMascotMovementEnabledChange = ::updateMascotMovementEnabled,
                 )
             }
         }
@@ -110,18 +113,32 @@ class MainActivity : ComponentActivity() {
         val appearance = mascotAppearancePreferences.read()
         mascotSizePercent = appearance.sizePercent
         mascotOpacityPercent = appearance.opacityPercent
+        mascotMovementEnabled = appearance.movementEnabled
     }
 
     private fun updateMascotSizePercent(value: Int) {
-        val appearance = MascotAppearance.normalized(value, mascotOpacityPercent)
+        val appearance = MascotAppearance.normalized(
+            sizePercent = value,
+            opacityPercent = mascotOpacityPercent,
+            movementEnabled = mascotMovementEnabled,
+        )
         mascotSizePercent = appearance.sizePercent
         mascotAppearancePreferences.setSizePercent(appearance.sizePercent)
     }
 
     private fun updateMascotOpacityPercent(value: Int) {
-        val appearance = MascotAppearance.normalized(mascotSizePercent, value)
+        val appearance = MascotAppearance.normalized(
+            sizePercent = mascotSizePercent,
+            opacityPercent = value,
+            movementEnabled = mascotMovementEnabled,
+        )
         mascotOpacityPercent = appearance.opacityPercent
         mascotAppearancePreferences.setOpacityPercent(appearance.opacityPercent)
+    }
+
+    private fun updateMascotMovementEnabled(value: Boolean) {
+        mascotMovementEnabled = value
+        mascotAppearancePreferences.setMovementEnabled(value)
     }
 
     private fun rescheduleReminders() {

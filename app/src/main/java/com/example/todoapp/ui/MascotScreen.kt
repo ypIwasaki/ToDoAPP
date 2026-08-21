@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -42,11 +43,13 @@ fun MascotScreen(
     mascotVisible: Boolean,
     sizePercent: Int,
     opacityPercent: Int,
+    movementEnabled: Boolean,
     onRequestOverlayAccess: () -> Unit,
     onShowMascot: () -> Unit,
     onHideMascot: () -> Unit,
     onSizeChange: (Int) -> Unit,
     onOpacityChange: (Int) -> Unit,
+    onMovementEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -96,7 +99,8 @@ fun MascotScreen(
         )
         Text(
             text = when {
-                mascotVisible -> "現在は静止表示のみです。移動やタップ反応は次の段階で追加します。"
+                mascotVisible && movementEnabled -> "画面内を自動で移動しています。画面消灯中は一時停止します。"
+                mascotVisible -> "自動移動は停止中です。表示設定から再開できます。"
                 overlayAllowed -> "ボタンを押すと、ほかのアプリを開いている間もキャラクターが表示されます。"
                 else -> "Androidの設定画面で、ToDoに「他のアプリの上に重ねて表示」を許可します。"
             },
@@ -134,6 +138,27 @@ fun MascotScreen(
                     supportingText = "数値を下げるほど透明になります",
                     onValueChange = onOpacityChange,
                 )
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = "自動移動",
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = "画面内のランダムな位置へ移動します",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = movementEnabled,
+                        onCheckedChange = onMovementEnabledChange,
+                    )
+                }
             }
         }
 

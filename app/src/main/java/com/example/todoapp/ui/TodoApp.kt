@@ -36,6 +36,7 @@ fun TodoApp(
     mascotVisible: Boolean,
     mascotSizePercent: Int,
     mascotOpacityPercent: Int,
+    mascotMovementEnabled: Boolean,
     onRequestExactAlarmAccess: () -> Unit,
     onRequestFullScreenAlertAccess: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
@@ -45,6 +46,7 @@ fun TodoApp(
     onHideMascot: () -> Unit,
     onMascotSizeChange: (Int) -> Unit,
     onMascotOpacityChange: (Int) -> Unit,
+    onMascotMovementEnabledChange: (Boolean) -> Unit,
 ) {
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -69,6 +71,7 @@ fun TodoApp(
             mascotVisible = mascotVisible,
             mascotSizePercent = mascotSizePercent,
             mascotOpacityPercent = mascotOpacityPercent,
+            mascotMovementEnabled = mascotMovementEnabled,
             snackbarHostState = snackbarHostState,
             onSectionChange = viewModel::selectMainSection,
             onFilterChange = viewModel::changeTaskFilter,
@@ -86,6 +89,7 @@ fun TodoApp(
             onHideMascot = onHideMascot,
             onMascotSizeChange = onMascotSizeChange,
             onMascotOpacityChange = onMascotOpacityChange,
+            onMascotMovementEnabledChange = onMascotMovementEnabledChange,
         )
 
         AppDestination.EDITOR -> TaskEditorScreen(
@@ -117,6 +121,7 @@ private fun MainHome(
     mascotVisible: Boolean,
     mascotSizePercent: Int,
     mascotOpacityPercent: Int,
+    mascotMovementEnabled: Boolean,
     snackbarHostState: SnackbarHostState,
     onSectionChange: (MainSection) -> Unit,
     onFilterChange: (TaskFilter) -> Unit,
@@ -134,6 +139,7 @@ private fun MainHome(
     onHideMascot: () -> Unit,
     onMascotSizeChange: (Int) -> Unit,
     onMascotOpacityChange: (Int) -> Unit,
+    onMascotMovementEnabledChange: (Boolean) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -211,11 +217,13 @@ private fun MainHome(
                 mascotVisible = mascotVisible,
                 sizePercent = mascotSizePercent,
                 opacityPercent = mascotOpacityPercent,
+                movementEnabled = mascotMovementEnabled,
                 onRequestOverlayAccess = onRequestMascotOverlayAccess,
                 onShowMascot = onShowMascot,
                 onHideMascot = onHideMascot,
                 onSizeChange = onMascotSizeChange,
                 onOpacityChange = onMascotOpacityChange,
+                onMovementEnabledChange = onMascotMovementEnabledChange,
                 modifier = Modifier.padding(contentPadding),
             )
         }

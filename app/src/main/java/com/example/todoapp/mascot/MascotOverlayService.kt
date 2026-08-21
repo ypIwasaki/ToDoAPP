@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.IBinder
 import android.provider.Settings
@@ -20,7 +21,6 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.example.todoapp.MainActivity
 import com.example.todoapp.R
-import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -28,10 +28,10 @@ class MascotOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var appearancePreferences: MascotAppearancePreferences
     private var mascotView: View? = null
-    private var mascotLayoutParams: WindowManager.LayoutParams? = null
+    private var movementController: MascotMovementController? = null
     private val appearanceChangeListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-            updateMascotAppearance()
+            updateMascotSettings()
         }
 
     override fun onCreate() {
@@ -56,19 +56,27 @@ class MascotOverlayService : Service() {
 
         if (mascotView == null) {
             showMascot()
+        } else {
+            updateMascotSettings()
         }
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        movementController?.onConfigurationChanged()
+    }
+
     override fun onDestroy() {
         appearancePreferences.unregisterListener(appearanceChangeListener)
+        movementController?.release()
+        movementController = null
         mascotView?.let { view ->
             runCatching { windowManager.removeView(view) }
         }
         mascotView = null
-        mascotLayoutParams = null
         _isRunning.value = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
@@ -79,29 +87,37 @@ class MascotOverlayService : Service() {
         val view = ImageView(this).apply {
             setImageBitmap(MascotSpriteFactory.createFrontSprite(this@MascotOverlayService))
             scaleType = ImageView.ScaleType.FIT_CENTER
-            alpha = appearance.alpha
             contentDescription = getString(R.string.mascot_content_description)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         val params = WindowManager.LayoutParams(
-            dp(appearance.scaledDimension(BASE_WIDTH_DP)),
-            dp(appearance.scaledDimension(BASE_HEIGHT_DP)),
+            1,
+            1,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = dp(12)
-            y = dp(80)
+            gravity = Gravity.TOP or Gravity.START
+            setFitInsetsTypes(0)
+        }
+        val controller = MascotMovementController(
+            context = this,
+            windowManager = windowManager,
+            view = view,
+            layoutParams = params,
+            onWindowError = ::stopSelf,
+        ).apply {
+            prepareInitial(appearance)
         }
 
         try {
             windowManager.addView(view, params)
             mascotView = view
-            mascotLayoutParams = params
+            movementController = controller
             _isRunning.value = true
+            controller.start()
         } catch (_: SecurityException) {
             stopSelf()
         } catch (_: WindowManager.BadTokenException) {
@@ -109,25 +125,13 @@ class MascotOverlayService : Service() {
         }
     }
 
-    private fun updateMascotAppearance() {
-        val view = mascotView ?: return
-        val params = mascotLayoutParams ?: return
+    private fun updateMascotSettings() {
         if (!Settings.canDrawOverlays(this)) {
             stopSelf()
             return
         }
 
-        val appearance = appearancePreferences.read()
-        view.alpha = appearance.alpha
-        params.width = dp(appearance.scaledDimension(BASE_WIDTH_DP))
-        params.height = dp(appearance.scaledDimension(BASE_HEIGHT_DP))
-        try {
-            windowManager.updateViewLayout(view, params)
-        } catch (_: IllegalArgumentException) {
-            stopSelf()
-        } catch (_: SecurityException) {
-            stopSelf()
-        }
+        movementController?.updateAppearance(appearancePreferences.read())
     }
 
     private fun startAsForeground() {
@@ -182,14 +186,9 @@ class MascotOverlayService : Service() {
         )
     }
 
-    private fun dp(value: Int): Int =
-        (value * resources.displayMetrics.density).roundToInt()
-
     companion object {
         private const val CHANNEL_ID = "mascot_overlay_status"
         private const val NOTIFICATION_ID = 10_001
-        private const val BASE_WIDTH_DP = 184
-        private const val BASE_HEIGHT_DP = 330
         private const val ACTION_SHOW = "com.example.todoapp.mascot.SHOW"
         private const val ACTION_HIDE = "com.example.todoapp.mascot.HIDE"
 
