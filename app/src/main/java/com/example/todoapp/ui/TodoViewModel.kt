@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class MainSection { TASKS, CALENDAR }
+enum class MainSection { TASKS, CALENDAR, MASCOT }
 enum class AppDestination { MAIN, EDITOR }
 enum class TaskFilter(val label: String) { ALL("すべて"), ACTIVE("未完了"), COMPLETED("完了") }
 

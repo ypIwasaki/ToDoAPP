@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -31,10 +32,19 @@ import com.example.todoapp.notification.ReminderSystemStatus
 fun TodoApp(
     viewModel: TodoViewModel,
     reminderSystemStatus: ReminderSystemStatus,
+    mascotOverlayAllowed: Boolean,
+    mascotVisible: Boolean,
+    mascotSizePercent: Int,
+    mascotOpacityPercent: Int,
     onRequestExactAlarmAccess: () -> Unit,
     onRequestFullScreenAlertAccess: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onRequestMascotOverlayAccess: () -> Unit,
+    onShowMascot: () -> Unit,
+    onHideMascot: () -> Unit,
+    onMascotSizeChange: (Int) -> Unit,
+    onMascotOpacityChange: (Int) -> Unit,
 ) {
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -55,6 +65,10 @@ fun TodoApp(
             section = viewModel.mainSection,
             filter = viewModel.taskFilter,
             reminderSystemStatus = reminderSystemStatus,
+            mascotOverlayAllowed = mascotOverlayAllowed,
+            mascotVisible = mascotVisible,
+            mascotSizePercent = mascotSizePercent,
+            mascotOpacityPercent = mascotOpacityPercent,
             snackbarHostState = snackbarHostState,
             onSectionChange = viewModel::selectMainSection,
             onFilterChange = viewModel::changeTaskFilter,
@@ -67,6 +81,11 @@ fun TodoApp(
             onRequestFullScreenAlertAccess = onRequestFullScreenAlertAccess,
             onOpenNotificationSettings = onOpenNotificationSettings,
             onOpenAppSettings = onOpenAppSettings,
+            onRequestMascotOverlayAccess = onRequestMascotOverlayAccess,
+            onShowMascot = onShowMascot,
+            onHideMascot = onHideMascot,
+            onMascotSizeChange = onMascotSizeChange,
+            onMascotOpacityChange = onMascotOpacityChange,
         )
 
         AppDestination.EDITOR -> TaskEditorScreen(
@@ -94,6 +113,10 @@ private fun MainHome(
     section: MainSection,
     filter: TaskFilter,
     reminderSystemStatus: ReminderSystemStatus,
+    mascotOverlayAllowed: Boolean,
+    mascotVisible: Boolean,
+    mascotSizePercent: Int,
+    mascotOpacityPercent: Int,
     snackbarHostState: SnackbarHostState,
     onSectionChange: (MainSection) -> Unit,
     onFilterChange: (TaskFilter) -> Unit,
@@ -106,6 +129,11 @@ private fun MainHome(
     onRequestFullScreenAlertAccess: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onRequestMascotOverlayAccess: () -> Unit,
+    onShowMascot: () -> Unit,
+    onHideMascot: () -> Unit,
+    onMascotSizeChange: (Int) -> Unit,
+    onMascotOpacityChange: (Int) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -113,15 +141,21 @@ private fun MainHome(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (section == MainSection.TASKS) "やること" else "カレンダー",
+                        text = when (section) {
+                            MainSection.TASKS -> "やること"
+                            MainSection.CALENDAR -> "カレンダー"
+                            MainSection.MASCOT -> "キャラクター"
+                        },
                         style = MaterialTheme.typography.headlineMedium,
                     )
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateTask) {
-                Icon(Icons.Outlined.Add, contentDescription = "タスクを追加")
+            if (section != MainSection.MASCOT) {
+                FloatingActionButton(onClick = onCreateTask) {
+                    Icon(Icons.Outlined.Add, contentDescription = "タスクを追加")
+                }
             }
         },
         bottomBar = {
@@ -138,6 +172,12 @@ private fun MainHome(
                     icon = { Icon(Icons.Outlined.CalendarMonth, contentDescription = null) },
                     label = { Text("カレンダー") },
                 )
+                NavigationBarItem(
+                    selected = section == MainSection.MASCOT,
+                    onClick = { onSectionChange(MainSection.MASCOT) },
+                    icon = { Icon(Icons.Outlined.Pets, contentDescription = null) },
+                    label = { Text("キャラ") },
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -153,7 +193,7 @@ private fun MainHome(
                 onSubtaskChecked = onSubtaskChecked,
                 onDeleteTask = onDeleteTask,
                 onRequestExactAlarmAccess = onRequestExactAlarmAccess,
-            onRequestFullScreenAlertAccess = onRequestFullScreenAlertAccess,
+                onRequestFullScreenAlertAccess = onRequestFullScreenAlertAccess,
                 onOpenNotificationSettings = onOpenNotificationSettings,
                 onOpenAppSettings = onOpenAppSettings,
                 modifier = Modifier.padding(contentPadding),
@@ -163,6 +203,19 @@ private fun MainHome(
                 tasks = tasks,
                 onEditTask = onEditTask,
                 onTaskChecked = onTaskChecked,
+                modifier = Modifier.padding(contentPadding),
+            )
+
+            MainSection.MASCOT -> MascotScreen(
+                overlayAllowed = mascotOverlayAllowed,
+                mascotVisible = mascotVisible,
+                sizePercent = mascotSizePercent,
+                opacityPercent = mascotOpacityPercent,
+                onRequestOverlayAccess = onRequestMascotOverlayAccess,
+                onShowMascot = onShowMascot,
+                onHideMascot = onHideMascot,
+                onSizeChange = onMascotSizeChange,
+                onOpacityChange = onMascotOpacityChange,
                 modifier = Modifier.padding(contentPadding),
             )
         }

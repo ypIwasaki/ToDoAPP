@@ -5,4 +5,10 @@
     <string name="notification_channel_description">画面点灯中とロック画面にタスクの期限を表示します</string>
     <string name="notification_title">期限が近づいています</string>
     <string name="notification_due_title">タスクの期限です</string>
+    <string name="mascot_overlay_channel_name">画面上のキャラクター</string>
+    <string name="mascot_overlay_channel_description">キャラクターを画面上に表示している間に使用します</string>
+    <string name="mascot_overlay_notification_title">キャラクターを表示中</string>
+    <string name="mascot_overlay_notification_text">ToDoのキャラクターが画面上に表示されています</string>
+    <string name="mascot_overlay_stop">非表示にする</string>
+    <string name="mascot_content_description">ToDoのキャラクター</string>
 </resources>
