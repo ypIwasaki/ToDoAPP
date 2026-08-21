@@ -45,6 +45,13 @@ internal class MascotSpriteAnimator(
         showExpression(nextExpressionIndex())
     }
 
+    fun showExpression(expression: MascotExpression) {
+        handler.removeCallbacks(nextWalkFrame)
+        walking = false
+        view.scaleX = 1f
+        showExpression(expression.frameIndex)
+    }
+
     fun release() {
         walking = false
         handler.removeCallbacks(nextWalkFrame)

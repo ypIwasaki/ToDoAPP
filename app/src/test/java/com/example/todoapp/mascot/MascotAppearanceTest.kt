@@ -21,6 +21,25 @@ class MascotAppearanceTest {
     }
 
     @Test
+    fun quietHoursSupportOvernightRanges() {
+        val appearance = MascotAppearance.normalized(
+            sizePercent = 100,
+            opacityPercent = 100,
+            quietStartHour = 22,
+            quietEndHour = 7,
+            autoResumeDelaySeconds = 999,
+        )
+
+        assertEquals(true, appearance.isQuietHour(23))
+        assertEquals(true, appearance.isQuietHour(6))
+        assertEquals(false, appearance.isQuietHour(12))
+        assertEquals(
+            MascotAppearance.MAX_AUTO_RESUME_DELAY_SECONDS,
+            appearance.autoResumeDelaySeconds,
+        )
+    }
+
+    @Test
     fun percentageValuesProduceDimensionsAndAlpha() {
         val appearance = MascotAppearance.normalized(
             sizePercent = 125,

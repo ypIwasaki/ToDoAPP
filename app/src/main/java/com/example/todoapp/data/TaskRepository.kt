@@ -69,6 +69,16 @@ class TaskRepository(
         taskDao.setSubtaskCompleted(subtaskId, completed)
     }
 
+    suspend fun snoozeTask(taskId: Long, delayMillis: Long): Boolean {
+        val task = taskDao.getTask(taskId)?.task ?: return false
+        if (task.isCompleted) return false
+        reminderScheduler.scheduleSnooze(
+            task = task,
+            triggerAt = System.currentTimeMillis() + delayMillis.coerceAtLeast(1_000L),
+        )
+        return true
+    }
+
     suspend fun deleteTask(task: TaskEntity) {
         reminderScheduler.cancel(task.id)
         reminderDeliveryStore.clear(task.id)

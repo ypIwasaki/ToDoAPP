@@ -5,10 +5,24 @@
     <string name="notification_channel_description">画面点灯中とロック画面にタスクの期限を表示します</string>
     <string name="notification_title">期限が近づいています</string>
     <string name="notification_due_title">タスクの期限です</string>
+    <string name="notification_snooze_title">タスクの再通知です</string>
     <string name="mascot_overlay_channel_name">画面上のキャラクター</string>
     <string name="mascot_overlay_channel_description">キャラクターを画面上に表示している間に使用します</string>
     <string name="mascot_overlay_notification_title">キャラクターを表示中</string>
     <string name="mascot_overlay_notification_text">ToDoのキャラクターが画面上に表示されています</string>
     <string name="mascot_overlay_stop">非表示にする</string>
+    <string name="mascot_announcement_channel_name">キャラクターからのお知らせ</string>
+    <string name="mascot_announcement_channel_description">タスクの状況をキャラクターがお知らせします</string>
+    <string name="mascot_announcement_title">キャラクターからのお知らせ</string>
     <string name="mascot_content_description">ToDoのキャラクター</string>
+    <string name="mascot_menu_open_app">アプリを開く</string>
+    <string name="mascot_menu_pause_movement">自動移動を停止</string>
+    <string name="mascot_menu_resume_movement">自動移動を再開</string>
+    <string name="mascot_menu_hide">キャラクターを非表示</string>
+    <string name="mascot_action_open">開く</string>
+    <string name="mascot_action_complete">完了</string>
+    <string name="mascot_action_undo">元に戻す</string>
+    <string name="mascot_action_snooze_10">10分後</string>
+    <string name="mascot_action_snooze_60">1時間後</string>
+    <string name="mascot_snooze_confirmation">%1$d分後にもう一度お知らせします。</string>
 </resources>

@@ -28,6 +28,60 @@ class ReminderNotifier(
     private val taskDao: TaskDao,
     private val deliveryStore: ReminderDeliveryStore,
 ) {
+    suspend fun deliverSnooze(
+        taskId: Long,
+        expectedTriggerAt: Long,
+    ): ReminderDeliveryResult {
+        val task = taskDao.getTask(taskId)?.task ?: return ReminderDeliveryResult.STALE
+        if (task.isCompleted) return ReminderDeliveryResult.STALE
+
+        val notifications = NotificationManagerCompat.from(context)
+        if (
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED ||
+            !notifications.areNotificationsEnabled()
+        ) return ReminderDeliveryResult.NOTIFICATIONS_DISABLED
+
+        val deliveryId = taskId xor Long.MIN_VALUE
+        if (
+            !deliveryStore.markDeliveredIfNew(
+                deliveryId,
+                expectedTriggerAt,
+                SNOOZE_DELIVERY_OFFSET,
+            )
+        ) return ReminderDeliveryResult.ALREADY_DELIVERED
+
+        val deadline = task.deadlineEpochMillis ?: System.currentTimeMillis()
+        return try {
+            createReminderNotificationChannel(context)
+            notifications.notify(
+                taskId.hashCode(),
+                buildNotification(
+                    taskId = taskId,
+                    title = task.title,
+                    deadline = deadline,
+                    offset = SNOOZE_NOTIFICATION_OFFSET,
+                    titleOverride = context.getString(R.string.notification_snooze_title),
+                ),
+            )
+            ReminderDeliveryResult.DELIVERED
+        } catch (_: SecurityException) {
+            deliveryStore.clearIfMatches(
+                deliveryId,
+                expectedTriggerAt,
+                SNOOZE_DELIVERY_OFFSET,
+            )
+            ReminderDeliveryResult.NOTIFICATIONS_DISABLED
+        } catch (exception: Exception) {
+            deliveryStore.clearIfMatches(
+                deliveryId,
+                expectedTriggerAt,
+                SNOOZE_DELIVERY_OFFSET,
+            )
+            throw exception
+        }
+    }
+
     suspend fun deliverIfCurrent(
         taskId: Long,
         expectedDeadline: Long,
@@ -72,6 +126,7 @@ class ReminderNotifier(
         title: String,
         deadline: Long,
         offset: Int,
+        titleOverride: String? = null,
     ): android.app.Notification {
         val openAppIntent = PendingIntent.getActivity(
             context,
@@ -92,7 +147,7 @@ class ReminderNotifier(
         return NotificationCompat.Builder(context, REMINDER_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(
-                context.getString(
+                titleOverride ?: context.getString(
                     if (offset == 0) R.string.notification_due_title else R.string.notification_title,
                 ),
             )
@@ -106,6 +161,11 @@ class ReminderNotifier(
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
+    }
+
+    private companion object {
+        const val SNOOZE_NOTIFICATION_OFFSET = 1
+        const val SNOOZE_DELIVERY_OFFSET = Int.MAX_VALUE
     }
 }
 

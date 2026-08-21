@@ -26,6 +26,9 @@ internal class MascotMovementController(
     private val layoutParams: WindowManager.LayoutParams,
     private val onWalkingStarted: (movingRight: Boolean) -> Unit,
     private val onWalkingStopped: () -> Unit,
+    private val onScreenStateChanged: (screenOn: Boolean) -> Unit,
+    private val onUserPositionChanged: (MascotRelativePosition) -> Unit,
+    private val onPlacementChanged: (MascotWindowPlacement) -> Unit,
     private val onWindowError: () -> Unit,
 ) {
     private val handler = Handler(Looper.getMainLooper())
@@ -37,23 +40,36 @@ internal class MascotMovementController(
     )
     private var movementAnimator: ValueAnimator? = null
     private var started = false
+    private var userInteracting = false
     private var receiverRegistered = false
     private val moveRunnable = Runnable(::startNextMove)
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_OFF -> stopMovement()
-                Intent.ACTION_SCREEN_ON -> restartMovement(INITIAL_MOVE_DELAY_MILLIS)
+                Intent.ACTION_SCREEN_OFF -> {
+                    stopMovement()
+                    onScreenStateChanged(false)
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    onScreenStateChanged(true)
+                    restartMovement(INITIAL_MOVE_DELAY_MILLIS)
+                }
             }
         }
     }
 
-    fun prepareInitial(appearance: MascotAppearance) {
+    fun prepareInitial(
+        appearance: MascotAppearance,
+        savedPosition: MascotRelativePosition?,
+    ) {
         this.appearance = appearance
         applyVisualSettings()
         val bounds = currentMovementBounds()
-        layoutParams.x = bounds.maxX
-        layoutParams.y = bounds.maxY
+        val initial = savedPosition?.let(bounds::fromRelative)
+            ?: MascotPosition(bounds.maxX, bounds.maxY)
+        layoutParams.x = initial.x
+        layoutParams.y = initial.y
+        notifyPlacement()
     }
 
     fun start() {
@@ -73,6 +89,7 @@ internal class MascotMovementController(
             layoutParams.x = position.x
             layoutParams.y = position.y
             if (updateViewLayout()) {
+                notifyPlacement()
                 restartMovement(SHORT_RESTART_DELAY_MILLIS)
             }
         }
@@ -80,6 +97,46 @@ internal class MascotMovementController(
 
     fun onConfigurationChanged() {
         updateAppearance(appearance)
+    }
+
+    fun beginUserDrag() {
+        userInteracting = true
+        stopMovement()
+    }
+
+    fun dragBy(deltaX: Float, deltaY: Float) {
+        if (!started || !userInteracting) return
+        val bounds = currentMovementBounds()
+        val position = bounds.clamp(
+            MascotPosition(
+                x = layoutParams.x + deltaX.roundToInt(),
+                y = layoutParams.y + deltaY.roundToInt(),
+            ),
+        )
+        layoutParams.x = position.x
+        layoutParams.y = position.y
+        if (updateViewLayout()) notifyPlacement()
+    }
+
+    fun endUserDrag(resumeDelayMillis: Long) {
+        if (!userInteracting) return
+        userInteracting = false
+        val bounds = currentMovementBounds()
+        onUserPositionChanged(
+            bounds.toRelative(MascotPosition(layoutParams.x, layoutParams.y)),
+        )
+        onWalkingStopped()
+        scheduleNextMove(resumeDelayMillis.coerceAtLeast(0L))
+    }
+
+    fun pauseForInteraction() {
+        userInteracting = true
+        stopMovement()
+    }
+
+    fun resumeAfterInteraction(delayMillis: Long = SHORT_RESTART_DELAY_MILLIS) {
+        userInteracting = false
+        scheduleNextMove(delayMillis.coerceAtLeast(0L))
     }
 
     fun release() {
@@ -93,6 +150,11 @@ internal class MascotMovementController(
 
     private fun applyVisualSettings() {
         view.alpha = appearance.alpha
+        layoutParams.flags = if (appearance.interactionsEnabled) {
+            layoutParams.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        } else {
+            layoutParams.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        }
         val area = currentSafeArea()
         val size = MascotMovementPlanner.fitWindowSize(
             requestedWidth = dp(appearance.scaledDimension(BASE_WIDTH_DP)),
@@ -127,7 +189,9 @@ internal class MascotMovementController(
             val fraction = animation.animatedFraction
             layoutParams.x = lerp(start.x, target.x, fraction)
             layoutParams.y = lerp(start.y, target.y, fraction)
-            if (!updateViewLayout()) {
+            if (updateViewLayout()) {
+                notifyPlacement()
+            } else {
                 stopMovement()
             }
         }
@@ -182,7 +246,7 @@ internal class MascotMovementController(
     }
 
     private fun canMove(): Boolean =
-        started && appearance.movementEnabled && powerManager.isInteractive
+        started && !userInteracting && appearance.movementEnabled && powerManager.isInteractive
 
     private fun updateViewLayout(): Boolean = try {
         windowManager.updateViewLayout(view, layoutParams)
@@ -193,6 +257,17 @@ internal class MascotMovementController(
     } catch (_: SecurityException) {
         onWindowError()
         false
+    }
+
+    private fun notifyPlacement() {
+        onPlacementChanged(
+            MascotWindowPlacement(
+                x = layoutParams.x,
+                y = layoutParams.y,
+                width = layoutParams.width,
+                height = layoutParams.height,
+            ),
+        )
     }
 
     private fun currentMovementBounds(): MascotMovementBounds {

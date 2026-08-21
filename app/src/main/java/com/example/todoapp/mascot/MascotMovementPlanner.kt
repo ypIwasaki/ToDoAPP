@@ -17,6 +17,28 @@ internal data class MascotMovementBounds(
         x = position.x.coerceIn(minX, maxX),
         y = position.y.coerceIn(minY, maxY),
     )
+
+    fun toRelative(position: MascotPosition): MascotRelativePosition {
+        val clamped = clamp(position)
+        return MascotRelativePosition(
+            xFraction = fraction(clamped.x, minX, maxX),
+            yFraction = fraction(clamped.y, minY, maxY),
+        )
+    }
+
+    fun fromRelative(position: MascotRelativePosition): MascotPosition {
+        val normalized = position.normalized()
+        return MascotPosition(
+            x = interpolate(minX, maxX, normalized.xFraction),
+            y = interpolate(minY, maxY, normalized.yFraction),
+        )
+    }
+
+    private fun fraction(value: Int, minimum: Int, maximum: Int): Float =
+        if (maximum <= minimum) 0f else (value - minimum).toFloat() / (maximum - minimum)
+
+    private fun interpolate(minimum: Int, maximum: Int, fraction: Float): Int =
+        (minimum + (maximum - minimum) * fraction).roundToInt()
 }
 
 internal data class MascotWindowSize(val width: Int, val height: Int)

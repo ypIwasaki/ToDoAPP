@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.todoapp.R
+import com.example.todoapp.mascot.MascotAnnouncementFrequency
 import com.example.todoapp.mascot.MascotAppearance
 import kotlin.math.roundToInt
 
@@ -44,12 +48,22 @@ fun MascotScreen(
     sizePercent: Int,
     opacityPercent: Int,
     movementEnabled: Boolean,
+    interactionsEnabled: Boolean,
+    announcementFrequency: MascotAnnouncementFrequency,
+    quietStartHour: Int,
+    quietEndHour: Int,
+    autoResumeDelaySeconds: Int,
     onRequestOverlayAccess: () -> Unit,
     onShowMascot: () -> Unit,
     onHideMascot: () -> Unit,
     onSizeChange: (Int) -> Unit,
     onOpacityChange: (Int) -> Unit,
     onMovementEnabledChange: (Boolean) -> Unit,
+    onInteractionsEnabledChange: (Boolean) -> Unit,
+    onAnnouncementFrequencyChange: (MascotAnnouncementFrequency) -> Unit,
+    onQuietStartHourChange: (Int) -> Unit,
+    onQuietEndHourChange: (Int) -> Unit,
+    onAutoResumeDelayChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -139,24 +153,67 @@ fun MascotScreen(
                     onValueChange = onOpacityChange,
                 )
                 Spacer(Modifier.height(16.dp))
+                SettingSwitch(
+                    title = "自動移動",
+                    description = "画面内のランダムな位置へ移動します",
+                    checked = movementEnabled,
+                    onCheckedChange = onMovementEnabledChange,
+                )
+                HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                SettingSwitch(
+                    title = "タップ・ドラッグ操作",
+                    description = "タップでアプリを開き、ドラッグで位置を変更します",
+                    checked = interactionsEnabled,
+                    onCheckedChange = onInteractionsEnabledChange,
+                )
+                Spacer(Modifier.height(12.dp))
+                AppearanceSlider(
+                    label = "操作後の自動移動再開",
+                    value = autoResumeDelaySeconds,
+                    minimum = MascotAppearance.MIN_AUTO_RESUME_DELAY_SECONDS,
+                    maximum = MascotAppearance.MAX_AUTO_RESUME_DELAY_SECONDS,
+                    supportingText = "ドラッグ終了後に自動移動を再開するまでの時間",
+                    valueSuffix = "秒",
+                    enabled = interactionsEnabled,
+                    onValueChange = onAutoResumeDelayChange,
+                )
+                HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                Text(
+                    text = "お知らせ頻度",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            text = "自動移動",
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            text = "画面内のランダムな位置へ移動します",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    MascotAnnouncementFrequency.entries.forEach { frequency ->
+                        FilterChip(
+                            selected = announcementFrequency == frequency,
+                            onClick = { onAnnouncementFrequencyChange(frequency) },
+                            label = { Text(frequency.label()) },
                         )
                     }
-                    Switch(
-                        checked = movementEnabled,
-                        onCheckedChange = onMovementEnabledChange,
+                }
+                if (announcementFrequency != MascotAnnouncementFrequency.OFF) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "お知らせしない時間：%02d:00〜%02d:00".format(
+                            quietStartHour,
+                            quietEndHour,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    HourSlider(
+                        label = "開始",
+                        value = quietStartHour,
+                        onValueChange = onQuietStartHourChange,
+                    )
+                    HourSlider(
+                        label = "終了",
+                        value = quietEndHour,
+                        onValueChange = onQuietEndHourChange,
                     )
                 }
             }
@@ -197,6 +254,8 @@ private fun AppearanceSlider(
     minimum: Int,
     maximum: Int,
     supportingText: String,
+    valueSuffix: String = "%",
+    enabled: Boolean = true,
     onValueChange: (Int) -> Unit,
 ) {
     Row(
@@ -206,13 +265,14 @@ private fun AppearanceSlider(
     ) {
         Text(label, style = MaterialTheme.typography.bodyLarge)
         Text(
-            text = "$value%",
+            text = "$value$valueSuffix",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
     }
     Slider(
         value = value.toFloat(),
+        enabled = enabled,
         onValueChange = { sliderValue ->
             onValueChange((sliderValue / SLIDER_INCREMENT).roundToInt() * SLIDER_INCREMENT)
         },
@@ -224,6 +284,57 @@ private fun AppearanceSlider(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+@Composable
+private fun SettingSwitch(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun HourSlider(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall)
+        Text("%02d:00".format(value), style = MaterialTheme.typography.labelMedium)
+    }
+    Slider(
+        value = value.toFloat(),
+        onValueChange = { onValueChange(it.roundToInt()) },
+        valueRange = 0f..23f,
+        steps = 22,
+    )
+}
+
+private fun MascotAnnouncementFrequency.label(): String = when (this) {
+    MascotAnnouncementFrequency.OFF -> "なし"
+    MascotAnnouncementFrequency.QUIET -> "静か"
+    MascotAnnouncementFrequency.NORMAL -> "標準"
+    MascotAnnouncementFrequency.LIVELY -> "にぎやか"
 }
 
 private const val SLIDER_INCREMENT = 5

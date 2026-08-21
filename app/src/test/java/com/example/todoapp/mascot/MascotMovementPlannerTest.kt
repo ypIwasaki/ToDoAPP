@@ -38,6 +38,19 @@ class MascotMovementPlannerTest {
     }
 
     @Test
+    fun relativePositionSurvivesDifferentScreenBounds() {
+        val originalBounds = MascotMovementBounds(20, 820, 100, 1_700)
+        val relative = originalBounds.toRelative(MascotPosition(620, 500))
+
+        assertEquals(0.75f, relative.xFraction, 0.0001f)
+        assertEquals(0.25f, relative.yFraction, 0.0001f)
+        assertEquals(
+            MascotPosition(310, 250),
+            MascotMovementBounds(10, 410, 50, 850).fromRelative(relative),
+        )
+    }
+
+    @Test
     fun movementDurationHasLowerAndUpperLimits() {
         assertEquals(
             1_800L,

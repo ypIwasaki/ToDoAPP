@@ -3,6 +3,8 @@ package com.example.todoapp
 import android.app.Application
 import com.example.todoapp.data.TaskRepository
 import com.example.todoapp.data.TodoDatabase
+import com.example.todoapp.mascot.MascotAnnouncementScheduler
+import com.example.todoapp.mascot.MascotAppearancePreferences
 import com.example.todoapp.notification.ReminderDeliveryStore
 import com.example.todoapp.notification.ReminderNotifier
 import com.example.todoapp.notification.ReminderScheduler
@@ -32,5 +34,9 @@ class TodoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         createReminderNotificationChannel(this)
+        MascotAnnouncementScheduler.update(
+            context = this,
+            frequency = MascotAppearancePreferences(this).read().announcementFrequency,
+        )
     }
 }

@@ -26,15 +26,40 @@ class ReminderScheduler(private val context: Context) {
             .coerceAtLeast(System.currentTimeMillis() + MINIMUM_DELAY_MILLIS)
 
         schedulePersistentBackup(task.id, deadline, offset, triggerAt)
-        schedulePlatformAlarm(task.id, deadline, offset, triggerAt)
+        schedulePlatformAlarm(
+            triggerAt = triggerAt,
+            pendingIntent = reminderPendingIntent(task.id, deadline, offset),
+        )
+    }
+
+    fun scheduleSnooze(task: TaskEntity, triggerAt: Long) {
+        cancelSnooze(task.id)
+        if (task.isCompleted) return
+        val safeTriggerAt = triggerAt.coerceAtLeast(
+            System.currentTimeMillis() + MINIMUM_DELAY_MILLIS,
+        )
+        scheduleSnoozeBackup(task.id, safeTriggerAt)
+        schedulePlatformAlarm(
+            triggerAt = safeTriggerAt,
+            pendingIntent = snoozePendingIntent(task.id, safeTriggerAt),
+        )
     }
 
     fun cancel(taskId: Long) {
         workManager.cancelUniqueWork(ReminderWorker.uniqueWorkName(taskId))
+        cancelPlatformAlarm(requestCode(taskId, snooze = false))
+        cancelSnooze(taskId)
+    }
 
+    private fun cancelSnooze(taskId: Long) {
+        workManager.cancelUniqueWork(ReminderWorker.snoozeUniqueWorkName(taskId))
+        cancelPlatformAlarm(requestCode(taskId, snooze = true))
+    }
+
+    private fun cancelPlatformAlarm(requestCode: Int) {
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            requestCode(taskId),
+            requestCode,
             Intent(context, ReminderReceiver::class.java),
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
         ) ?: return
@@ -43,12 +68,9 @@ class ReminderScheduler(private val context: Context) {
     }
 
     private fun schedulePlatformAlarm(
-        taskId: Long,
-        deadline: Long,
-        offset: Int,
         triggerAt: Long,
+        pendingIntent: PendingIntent,
     ) {
-        val pendingIntent = reminderPendingIntent(taskId, deadline, offset)
         if (alarmManager.canScheduleExactAlarms()) {
             try {
                 alarmManager.setExactAndAllowWhileIdle(
@@ -97,13 +119,35 @@ class ReminderScheduler(private val context: Context) {
         )
     }
 
+    private fun scheduleSnoozeBackup(taskId: Long, triggerAt: Long) {
+        val request = OneTimeWorkRequestBuilder<ReminderWorker>()
+            .setInitialDelay(
+                (triggerAt - System.currentTimeMillis()).coerceAtLeast(MINIMUM_DELAY_MILLIS),
+                TimeUnit.MILLISECONDS,
+            )
+            .setInputData(
+                workDataOf(
+                    ReminderWorker.KEY_TASK_ID to taskId,
+                    ReminderWorker.KEY_SNOOZE to true,
+                    ReminderWorker.KEY_SNOOZE_TRIGGER_AT to triggerAt,
+                ),
+            )
+            .addTag(SNOOZE_WORK_TAG)
+            .build()
+        workManager.enqueueUniqueWork(
+            ReminderWorker.snoozeUniqueWorkName(taskId),
+            ExistingWorkPolicy.REPLACE,
+            request,
+        )
+    }
+
     private fun reminderPendingIntent(
         taskId: Long,
         deadline: Long,
         offset: Int,
     ): PendingIntent = PendingIntent.getBroadcast(
         context,
-        requestCode(taskId),
+        requestCode(taskId, snooze = false),
         Intent(context, ReminderReceiver::class.java).apply {
             putExtra(ReminderReceiver.EXTRA_TASK_ID, taskId)
             putExtra(ReminderReceiver.EXTRA_DEADLINE, deadline)
@@ -112,10 +156,29 @@ class ReminderScheduler(private val context: Context) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun requestCode(taskId: Long): Int = (taskId xor (taskId ushr 32)).toInt()
+    private fun snoozePendingIntent(
+        taskId: Long,
+        triggerAt: Long,
+    ): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        requestCode(taskId, snooze = true),
+        Intent(context, ReminderReceiver::class.java).apply {
+            putExtra(ReminderReceiver.EXTRA_TASK_ID, taskId)
+            putExtra(ReminderReceiver.EXTRA_SNOOZE, true)
+            putExtra(ReminderReceiver.EXTRA_SNOOZE_TRIGGER_AT, triggerAt)
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    private fun requestCode(taskId: Long, snooze: Boolean): Int {
+        val base = (taskId xor (taskId ushr 32)).toInt()
+        return if (snooze) base xor SNOOZE_REQUEST_MASK else base
+    }
 
     private companion object {
         const val MINIMUM_DELAY_MILLIS = 1_000L
         const val REMINDER_WORK_TAG = "task-reminders"
+        const val SNOOZE_WORK_TAG = "task-snoozes"
+        const val SNOOZE_REQUEST_MASK = Int.MIN_VALUE
     }
 }

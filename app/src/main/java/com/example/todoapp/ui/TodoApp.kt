@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.todoapp.data.TaskWithSubtasks
+import com.example.todoapp.mascot.MascotAnnouncementFrequency
 import com.example.todoapp.notification.ReminderSystemStatus
 
 @Composable
@@ -37,6 +38,11 @@ fun TodoApp(
     mascotSizePercent: Int,
     mascotOpacityPercent: Int,
     mascotMovementEnabled: Boolean,
+    mascotInteractionsEnabled: Boolean,
+    mascotAnnouncementFrequency: MascotAnnouncementFrequency,
+    mascotQuietStartHour: Int,
+    mascotQuietEndHour: Int,
+    mascotAutoResumeDelaySeconds: Int,
     onRequestExactAlarmAccess: () -> Unit,
     onRequestFullScreenAlertAccess: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
@@ -47,6 +53,11 @@ fun TodoApp(
     onMascotSizeChange: (Int) -> Unit,
     onMascotOpacityChange: (Int) -> Unit,
     onMascotMovementEnabledChange: (Boolean) -> Unit,
+    onMascotInteractionsEnabledChange: (Boolean) -> Unit,
+    onMascotAnnouncementFrequencyChange: (MascotAnnouncementFrequency) -> Unit,
+    onMascotQuietStartHourChange: (Int) -> Unit,
+    onMascotQuietEndHourChange: (Int) -> Unit,
+    onMascotAutoResumeDelayChange: (Int) -> Unit,
 ) {
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -72,6 +83,11 @@ fun TodoApp(
             mascotSizePercent = mascotSizePercent,
             mascotOpacityPercent = mascotOpacityPercent,
             mascotMovementEnabled = mascotMovementEnabled,
+            mascotInteractionsEnabled = mascotInteractionsEnabled,
+            mascotAnnouncementFrequency = mascotAnnouncementFrequency,
+            mascotQuietStartHour = mascotQuietStartHour,
+            mascotQuietEndHour = mascotQuietEndHour,
+            mascotAutoResumeDelaySeconds = mascotAutoResumeDelaySeconds,
             snackbarHostState = snackbarHostState,
             onSectionChange = viewModel::selectMainSection,
             onFilterChange = viewModel::changeTaskFilter,
@@ -90,6 +106,11 @@ fun TodoApp(
             onMascotSizeChange = onMascotSizeChange,
             onMascotOpacityChange = onMascotOpacityChange,
             onMascotMovementEnabledChange = onMascotMovementEnabledChange,
+            onMascotInteractionsEnabledChange = onMascotInteractionsEnabledChange,
+            onMascotAnnouncementFrequencyChange = onMascotAnnouncementFrequencyChange,
+            onMascotQuietStartHourChange = onMascotQuietStartHourChange,
+            onMascotQuietEndHourChange = onMascotQuietEndHourChange,
+            onMascotAutoResumeDelayChange = onMascotAutoResumeDelayChange,
         )
 
         AppDestination.EDITOR -> TaskEditorScreen(
@@ -122,6 +143,11 @@ private fun MainHome(
     mascotSizePercent: Int,
     mascotOpacityPercent: Int,
     mascotMovementEnabled: Boolean,
+    mascotInteractionsEnabled: Boolean,
+    mascotAnnouncementFrequency: MascotAnnouncementFrequency,
+    mascotQuietStartHour: Int,
+    mascotQuietEndHour: Int,
+    mascotAutoResumeDelaySeconds: Int,
     snackbarHostState: SnackbarHostState,
     onSectionChange: (MainSection) -> Unit,
     onFilterChange: (TaskFilter) -> Unit,
@@ -140,6 +166,11 @@ private fun MainHome(
     onMascotSizeChange: (Int) -> Unit,
     onMascotOpacityChange: (Int) -> Unit,
     onMascotMovementEnabledChange: (Boolean) -> Unit,
+    onMascotInteractionsEnabledChange: (Boolean) -> Unit,
+    onMascotAnnouncementFrequencyChange: (MascotAnnouncementFrequency) -> Unit,
+    onMascotQuietStartHourChange: (Int) -> Unit,
+    onMascotQuietEndHourChange: (Int) -> Unit,
+    onMascotAutoResumeDelayChange: (Int) -> Unit,
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -218,12 +249,22 @@ private fun MainHome(
                 sizePercent = mascotSizePercent,
                 opacityPercent = mascotOpacityPercent,
                 movementEnabled = mascotMovementEnabled,
+                interactionsEnabled = mascotInteractionsEnabled,
+                announcementFrequency = mascotAnnouncementFrequency,
+                quietStartHour = mascotQuietStartHour,
+                quietEndHour = mascotQuietEndHour,
+                autoResumeDelaySeconds = mascotAutoResumeDelaySeconds,
                 onRequestOverlayAccess = onRequestMascotOverlayAccess,
                 onShowMascot = onShowMascot,
                 onHideMascot = onHideMascot,
                 onSizeChange = onMascotSizeChange,
                 onOpacityChange = onMascotOpacityChange,
                 onMovementEnabledChange = onMascotMovementEnabledChange,
+                onInteractionsEnabledChange = onMascotInteractionsEnabledChange,
+                onAnnouncementFrequencyChange = onMascotAnnouncementFrequencyChange,
+                onQuietStartHourChange = onMascotQuietStartHourChange,
+                onQuietEndHourChange = onMascotQuietEndHourChange,
+                onAutoResumeDelayChange = onMascotAutoResumeDelayChange,
                 modifier = Modifier.padding(contentPadding),
             )
         }
