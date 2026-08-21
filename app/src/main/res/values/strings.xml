@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ToDo</string>
+    <string name="notification_channel_name">期限のお知らせ</string>
+    <string name="notification_channel_description">画面点灯中とロック画面にタスクの期限を表示します</string>
+    <string name="notification_title">期限が近づいています</string>
+    <string name="notification_due_title">タスクの期限です</string>
+</resources>
