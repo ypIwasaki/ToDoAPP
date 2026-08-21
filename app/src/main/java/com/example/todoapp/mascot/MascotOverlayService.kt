@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class MascotOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var appearancePreferences: MascotAppearancePreferences
+    private var spriteAnimator: MascotSpriteAnimator? = null
     private var mascotView: View? = null
     private var movementController: MascotMovementController? = null
     private val appearanceChangeListener =
@@ -73,6 +74,8 @@ class MascotOverlayService : Service() {
         appearancePreferences.unregisterListener(appearanceChangeListener)
         movementController?.release()
         movementController = null
+        spriteAnimator?.release()
+        spriteAnimator = null
         mascotView?.let { view ->
             runCatching { windowManager.removeView(view) }
         }
@@ -84,12 +87,16 @@ class MascotOverlayService : Service() {
 
     private fun showMascot() {
         val appearance = appearancePreferences.read()
+        val sprites = MascotSpriteFactory.createAnimatedSprites(this)
         val view = ImageView(this).apply {
-            setImageBitmap(MascotSpriteFactory.createFrontSprite(this@MascotOverlayService))
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = getString(R.string.mascot_content_description)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
+        val animator = MascotSpriteAnimator(
+            view = view,
+            sprites = sprites,
+        )
         val params = WindowManager.LayoutParams(
             1,
             1,
@@ -107,6 +114,8 @@ class MascotOverlayService : Service() {
             windowManager = windowManager,
             view = view,
             layoutParams = params,
+            onWalkingStarted = animator::startWalking,
+            onWalkingStopped = animator::stopWalking,
             onWindowError = ::stopSelf,
         ).apply {
             prepareInitial(appearance)
@@ -116,11 +125,14 @@ class MascotOverlayService : Service() {
             windowManager.addView(view, params)
             mascotView = view
             movementController = controller
+            spriteAnimator = animator
             _isRunning.value = true
             controller.start()
         } catch (_: SecurityException) {
+            animator.release()
             stopSelf()
         } catch (_: WindowManager.BadTokenException) {
+            animator.release()
             stopSelf()
         }
     }

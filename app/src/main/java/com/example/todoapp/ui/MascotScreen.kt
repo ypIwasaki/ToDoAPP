@@ -99,7 +99,7 @@ fun MascotScreen(
         )
         Text(
             text = when {
-                mascotVisible && movementEnabled -> "画面内を自動で移動しています。画面消灯中は一時停止します。"
+                mascotVisible && movementEnabled -> "歩行アニメーションで移動中です。停止時には表情が変わります。"
                 mascotVisible -> "自動移動は停止中です。表示設定から再開できます。"
                 overlayAllowed -> "ボタンを押すと、ほかのアプリを開いている間もキャラクターが表示されます。"
                 else -> "Androidの設定画面で、ToDoに「他のアプリの上に重ねて表示」を許可します。"

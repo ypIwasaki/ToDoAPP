@@ -24,6 +24,8 @@ internal class MascotMovementController(
     private val windowManager: WindowManager,
     private val view: View,
     private val layoutParams: WindowManager.LayoutParams,
+    private val onWalkingStarted: (movingRight: Boolean) -> Unit,
+    private val onWalkingStopped: () -> Unit,
     private val onWindowError: () -> Unit,
 ) {
     private val handler = Handler(Looper.getMainLooper())
@@ -107,6 +109,12 @@ internal class MascotMovementController(
         val bounds = currentMovementBounds()
         val start = bounds.clamp(MascotPosition(layoutParams.x, layoutParams.y))
         val target = chooseTarget(bounds, start)
+        if (target == start) {
+            onWalkingStopped()
+            scheduleNextMove(randomPauseMillis())
+            return
+        }
+        onWalkingStarted(target.x > start.x)
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = MascotMovementPlanner.durationMillis(
                 start,
@@ -127,6 +135,7 @@ internal class MascotMovementController(
             override fun onAnimationEnd(animation: Animator) {
                 if (movementAnimator !== animator) return
                 movementAnimator = null
+                onWalkingStopped()
                 scheduleNextMove(randomPauseMillis())
             }
         })
@@ -163,6 +172,7 @@ internal class MascotMovementController(
         val animator = movementAnimator
         movementAnimator = null
         animator?.cancel()
+        onWalkingStopped()
     }
 
     private fun scheduleNextMove(delayMillis: Long) {
